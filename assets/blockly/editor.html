@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <style>
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+    }
+
+    #blocklyDiv {
+      height: 100%;
+      width: 100%;
+    }
+  </style>
+  <script src="blockly_compressed.js?v=20260210"></script>
+  <script src="blocks_compressed.js?v=20260210"></script>
+  <script src="python_compressed.js?v=20260210"></script>
+  <script src="en.js?v=20260210"></script>
+</head>
+
+<body>
+  <div
+    style="position: absolute; top:0; right:0; background: red; color: white; padding: 2px 5px; font-size: 10px; z-index: 9999; opacity: 0.7;">
+    v1615
+  </div>
+  <div id="blocklyDiv"></div>
+
+  <xml xmlns="https://developers.google.com/blockly/xml" id="toolbox" style="display: none">
+    <category name="Logic" colour="210">
+      <block type="controls_if"></block>
+      <block type="logic_compare"></block>
+      <block type="logic_operation"></block>
+      <block type="logic_negate"></block>
+      <block type="logic_boolean"></block>
+      <block type="logic_null"></block>
+      <block type="logic_ternary"></block>
+    </category>
+    <category name="Loops" colour="120">
+      <block type="controls_repeat_ext"></block>
+      <block type="controls_whileUntil"></block>
+      <block type="controls_for"></block>
+      <block type="controls_forEach"></block>
+      <block type="controls_flow_statements"></block>
+    </category>
+    <category name="Math" colour="230">
+      <block type="math_number"></block>
+      <block type="math_arithmetic"></block>
+      <block type="math_single"></block>
+      <block type="math_trig"></block>
+      <block type="math_constant"></block>
+      <block type="math_number_property"></block>
+      <block type="math_round"></block>
+      <block type="math_on_list"></block>
+      <block type="math_modulo"></block>
+      <block type="math_constrain"></block>
+      <block type="math_random_int"></block>
+      <block type="math_random_float"></block>
+      <block type="math_atan2"></block>
+    </category>
+    <category name="Text" colour="160">
+      <block type="text"></block>
+      <block type="text_join"></block>
+      <block type="text_append"></block>
+      <block type="text_length"></block>
+      <block type="text_isEmpty"></block>
+      <block type="text_indexOf"></block>
+      <block type="text_charAt"></block>
+      <block type="text_getSubstring"></block>
+      <block type="text_changeCase"></block>
+      <block type="text_trim"></block>
+      <block type="text_print"></block>
+      <block type="text_prompt_ext"></block>
+    </category>
+    <category name="Variables" colour="330" custom="VARIABLE"></category>
+    <category name="Functions" colour="290" custom="PROCEDURE"></category>
+    <sep></sep>
+    <category name="Source" colour="20">
+      <block type="inst_set_voltage"></block>
+      <block type="inst_set_frequency"></block>
+      <block type="inst_source_measure_voltage"></block>
+      <block type="inst_source_measure_current"></block>
+      <block type="inst_source_slew_rate"></block>
+      <block type="inst_source_protections"></block>
+      <block type="inst_output_on"></block>
+      <block type="inst_output_off"></block>
+    </category>
+    <category name="Load" colour="120">
+      <block type="inst_load_mode"></block>
+      <block type="inst_load_set_current"></block>
+      <block type="inst_load_measure_voltage"></block>
+      <block type="inst_load_measure_current"></block>
+      <block type="inst_load_output_on"></block>
+      <block type="inst_load_output_off"></block>
+    </category>
+    <category name="Scope" colour="200">
+      <block type="inst_scope_autoscale"></block>
+      <block type="inst_scope_save_screenshot"></block>
+      <block type="inst_scope_timebase"></block>
+      <block type="inst_scope_vertical"></block>
+      <block type="inst_scope_coupling"></block>
+      <block type="inst_scope_bandwidth"></block>
+      <block type="inst_scope_trigger"></block>
+      <block type="inst_scope_configure_meas"></block>
+      <block type="inst_scope_get_meas"></block>
+    </category>
+    <category name="DMM" colour="0">
+      <block type="inst_dmm_measure_voltage"></block>
+      <block type="inst_dmm_measure_current"></block>
+    </category>
+    <category name="System" colour="290">
+      <block type="inst_wait"></block>
+      <block type="inst_get_param"></block>
+      <block type="inst_log"></block>
+    </category>
+  </xml>
+
+  <script>
+    var AVAILABLE_PARAMS = [["No Params Available", "NONE"]];
+
+    function setAvailableParams(paramsList) {
+      console.log("Setting params:", paramsList);
+      if (paramsList && paramsList.length > 0) {
+        AVAILABLE_PARAMS = paramsList.map(function (p) { return [p, p]; });
+      } else {
+        AVAILABLE_PARAMS = [["No Params Available", "NONE"]];
+      }
+    }
+
+    // STAMP: 2026-02-10_1615
+    // Compatibility for newer Blockly versions (v10+)
+    var realGenerator = Blockly.Python;
+
+    // DEFINE a global proxy that handles EVERY call even if variables are confused
+    window.pythonGenerator = new Proxy({}, {
+      get: function (target, prop) {
+        var gen = window.activeBlocklyPythonGenerator || Blockly.Python;
+        if (typeof gen[prop] === 'function') {
+          return gen[prop].bind(gen);
+        }
+        return gen[prop];
+      },
+      set: function (target, prop, value) {
+        var gen = window.activeBlocklyPythonGenerator || Blockly.Python;
+        gen[prop] = value;
+        return true;
+      }
+    });
+
+    window.activeBlocklyPythonGenerator = Blockly.Python;
+    console.log("GodMode Proxy Initialized. Blockly.Python found:", !!Blockly.Python);
+  </script>
+
+  <!-- Load Custom Blocks with Cache Buster -->
+  <script src="custom_blocks.js?v=20260210_1552"></script>
+
+  <script>
+    // Initialize Blockly
+    var workspace = Blockly.inject('blocklyDiv', {
+      toolbox: document.getElementById('toolbox')
+    });
+
+    // Helper functions for Python interaction
+    function getPythonCode() {
+      try {
+        // ALWAYS use the generator instance directly from the workspace context or global
+        var generator = window.activeBlocklyPythonGenerator || Blockly.Python;
+
+        console.log("Executing Code Gen. Generator type:", typeof generator);
+        console.log("Generator has valueToCode:", typeof generator.valueToCode === 'function');
+
+        var code = generator.workspaceToCode(workspace);
+        return code;
+      } catch (e) {
+        console.error("Error generating Python code:", e);
+        return "# Error generating code: " + e.toString();
+      }
+    }
+
+    function getXML() {
+      var xml = Blockly.Xml.workspaceToDom(workspace);
+      return Blockly.Xml.domToText(xml);
+    }
+
+    function setXML(xmlText) {
+      console.log("Received XML to inject:", xmlText);
+      try {
+        var xml;
+        if (Blockly.utils && Blockly.utils.xml && Blockly.utils.xml.textToDom) {
+          xml = Blockly.utils.xml.textToDom(xmlText);
+        } else if (Blockly.Xml && Blockly.Xml.textToDom) {
+          xml = Blockly.Xml.textToDom(xmlText);
+        } else {
+          throw new Error("Could not find textToDom function");
+        }
+        Blockly.mainWorkspace.clear();
+        Blockly.Xml.domToWorkspace(xml, workspace);
+      } catch (e) {
+        console.error("Error setting XML:", e);
+      }
+    }
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,38 @@
+{
+    "simulation_mode": false,
+    "instruments": [
+        {
+            "name": "MSO44B",
+            "type": "Scope",
+            "driver": "TektronixScope",
+            "address": "USB0::0x0699::0x0527::SGVJ010571::INSTR",
+            "limits": {
+                "V": 80.0,
+                "I": 60.0,
+                "P": 1200.0
+            }
+        },
+        {
+            "name": "Chroma 62060D-600",
+            "type": "Bidirectional DC Supply",
+            "driver": "ChromaPowerSupply",
+            "address": "USB0::0x0A69::0x0884::96206007000224::INSTR",
+            "limits": {
+                "V": 80.0,
+                "I": 60.0,
+                "P": 1200.0
+            }
+        },
+        {
+            "name": "Chroma 62020H-150S",
+            "type": "DC Source",
+            "driver": "ChromaPowerSupply",
+            "address": "USB0::0x0A69::0x084B::S60000001765::INSTR",
+            "limits": {
+                "V": 150.0,
+                "I": 60.0,
+                "P": 1200.0
+            }
+        }
+    ]
+}

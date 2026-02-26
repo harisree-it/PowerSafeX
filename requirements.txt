@@ -1,0 +1,7 @@
+PyQt6
+pyvisa
+python-docx
+docxtpl
+pywin32
+matplotlib
+numpy
