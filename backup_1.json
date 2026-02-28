@@ -1,0 +1,36 @@
+{
+    "dut_data": {
+        "Converter Type": "MPPT DC/DC Converter",
+        "Project Name": "BBNL MPPT 1kW",
+        "Part Number": "TPS1030004A",
+        "Build Version": "S04",
+        "FW Checksum": "FFABD",
+        "Tester Name": "VISHNU C V",
+        "Power Rating": "1000",
+        "Input Nominal V": "80",
+        "Input Min V": "55",
+        "Input Max V": "120",
+        "Output Nominal V": "54.5",
+        "Output Min V": "42",
+        "Output Max V": "47",
+        "Input Source": "Chroma 62060D-600",
+        "Output Load": "Resistive Load Bank"
+    },
+    "test_params": {
+        "Input voltage range verification": {
+            "Nominal Voltage": "80",
+            "Input Min Voltage": "55",
+            "Input Max Voltage": "120",
+            "Input UVLO Point": 38.0,
+            "Input UVLO Recovery": 39.0,
+            "Input OVP Point": 62.0,
+            "Input OVP Recovery": 61.0,
+            "Startup Time": 100.0,
+            "Load Mode": "CC",
+            "Load Value": "1000"
+        }
+    },
+    "selected_tests": [
+        "Input voltage range verification"
+    ]
+}

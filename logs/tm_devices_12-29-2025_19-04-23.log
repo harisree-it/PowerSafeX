@@ -1,0 +1,11 @@
+[2025-12-29 19:04:23.553491] [tm_devices] [   DEBUG] timezone==Asia/Calcutta
+[2025-12-29 19:04:23.554796] [tm_devices] [   DEBUG] tm_devices==3.5.0
+[2025-12-29 19:04:23.554943] [tm_devices] [    INFO] Opening DeviceManager
+[2025-12-29 19:04:23.555363] [tm_devices] [    INFO] Creating Connection to SCOPE 1 "SCOPE"
+[2025-12-29 19:04:23.578326] [tm_devices] [ WARNING] 
+The device `USB0::0x0699::0x0527::SGVJ010576::0::INSTR` had data sitting in the VISA Output Buffer on first connection. 
+Detected data in the buffer via the Status Byte register. 
+The device_clear() will be called so VISA I/O buffers get flushed.
+[2025-12-29 19:06:33.597586] [tm_devices] [ WARNING] A VISA IO error occurred when attempting to read the status byte or clear the output buffer of the resource `USB0::0x0699::0x0527::SGVJ010576::0::INSTR`.
+Error: VI_ERROR_SYSTEM_ERROR (-1073807360): Unknown system error (miscellaneous error).
+[2025-12-29 19:06:40.619005] [tm_devices] [    INFO] DeviceManager Closed
