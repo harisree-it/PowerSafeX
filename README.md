@@ -1,7 +1,7 @@
 # PowerSafe - Converter Test Automation (GUI)
 
 <div align="center">
-  <img src="assets/welcome_logo.png" alt="PowerSafe Logo" width="300"/>
+  <img src="assets/logo.png" alt="PowerSafe Logo" width="300"/>
 </div>
 
 ## 📖 Overview
