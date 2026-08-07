@@ -1,7 +1,7 @@
 
 import json
 import os
-from instruments.drivers import ChromaPowerSupply, ChromaElectronicLoad, TektronixScope, Instrument
+from instruments.drivers import ChromaPowerSupply, ChromaAcSource, ChromaElectronicLoad, TektronixScope, Instrument
 
 CONFIG_FILE = "instruments.json"
 
@@ -27,10 +27,11 @@ class InstrumentManager:
         
         # Helper map for driver classes
         self.driver_map = {
-            "ChromaPowerSupply": ChromaPowerSupply,
+            "ChromaPowerSupply":   ChromaPowerSupply,
+            "ChromaAcSource":      ChromaAcSource,
             "ChromaElectronicLoad": ChromaElectronicLoad,
-            "TektronixScope": TektronixScope,
-            "Instrument": Instrument
+            "TektronixScope":      TektronixScope,
+            "Instrument":          Instrument
         }
         
         # Store persistent driver instances
@@ -142,20 +143,22 @@ class InstrumentManager:
     # Backward compatibility properties (return first found)
     @property
     def ac_source(self):
-        # Try multiple type names for source
+        # Try multiple type names for source (DC and AC)
         source_types = ["Source", "AC Source", "Bidirectional DC Supply", "DC Supply", "DC Source"]
         for src_type in source_types:
             srcs = self.get_instruments_by_role(src_type)
             if srcs:
                 return self.get_driver_instance(srcs[0]["name"])
-        # Fallback - Use a safer default and respect simulation mode
+        # Fallback
         return ChromaPowerSupply("GPIB0::1::INSTR", simulation_mode=self.simulation_mode)
         
     @property
     def dc_load(self):
-        loads = self.get_instruments_by_role("Load")
-        if loads:
-            return self.get_driver_instance(loads[0]["name"])
+        load_types = ["Load", "Electronic Load", "DC Load"]
+        for load_type in load_types:
+            loads = self.get_instruments_by_role(load_type)
+            if loads:
+                return self.get_driver_instance(loads[0]["name"])
         return ChromaElectronicLoad("GPIB0::2::INSTR", simulation_mode=self.simulation_mode)
 
     @property
@@ -165,7 +168,7 @@ class InstrumentManager:
             return self.get_driver_instance(scopes[0]["name"])
         # Fallback - Use the user's MSO44B address if possible, otherwise generic default
         # But crucially, pass simulation_mode correctly.
-        return TektronixScope("USB0::0x0699::0x0527::SGVJ010571::INSTR", simulation_mode=self.simulation_mode)
+        return TektronixScope("USB0::0x0699::0x0527::SGVJ010576::INSTR", simulation_mode=self.simulation_mode)
 
     # Limits properties for backward compatibility
     @property
@@ -176,8 +179,10 @@ class InstrumentManager:
 
     @property
     def dc_load_limits(self):
-        loads = self.get_instruments_by_role("Load")
-        if loads: return loads[0]["limits"]
+        load_types = ["Load", "Electronic Load", "DC Load"]
+        for load_type in load_types:
+            loads = self.get_instruments_by_role(load_type)
+            if loads: return loads[0].get("limits", {"V": 80, "I": 60, "P": 300})
         return {"V": 80, "I": 60, "P": 300}
 
     def update_instrument(self, idx, data):

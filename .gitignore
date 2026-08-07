@@ -22,16 +22,18 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+*.spec
 
-# Test Reports
+# Generated/runtime report output (keep the template tracked, ignore everything else)
+reports/*
+!reports/template/
+!reports/template/**
 TestReport_*.docx
 TestReport_*.pdf
-reports/
 
 # Logs
 logs/
 *.log
 
-# Misc
-backup*.json
-tesst.json
+# User data (persisted block flows, backup exports)
+data/

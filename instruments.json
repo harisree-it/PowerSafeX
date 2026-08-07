@@ -5,7 +5,7 @@
             "name": "MSO44B",
             "type": "Scope",
             "driver": "TektronixScope",
-            "address": "USB0::0x0699::0x0527::SGVJ010571::INSTR",
+            "address": "USB0::0x0699::0x0527::SGVJ010576::INSTR",
             "limits": {
                 "V": 80.0,
                 "I": 60.0,
@@ -24,14 +24,36 @@
             }
         },
         {
-            "name": "Chroma 62020H-150S",
-            "type": "DC Source",
+            "name": "Chroma 63208A-150-800",
+            "type": "AC Source",
             "driver": "ChromaPowerSupply",
-            "address": "USB0::0x0A69::0x084B::S60000001765::INSTR",
+            "address": "USB0::0x0A69::0x0879::63208AL01258::INSTR",
             "limits": {
                 "V": 150.0,
                 "I": 60.0,
                 "P": 1200.0
+            }
+        },
+        {
+            "name": "Chroma 61509",
+            "type": "AC Source",
+            "driver": "ChromaPowerSupply",
+            "address": "USB0::0x0A69::0x0883::96150900011364::INSTR",
+            "limits": {
+                "V": 300.0,
+                "I": 60.0,
+                "P": 600.0
+            }
+        },
+        {
+            "name": "Chroma 63208A-150-800",
+            "type": "Electronic Load",
+            "driver": "ChromaElectronicLoad",
+            "address": "USB0::0x0A69::0x0879::63208AL01258::INSTR",
+            "limits": {
+                "V": 150.0,
+                "I": 100.0,
+                "P": 20000.0
             }
         }
     ]

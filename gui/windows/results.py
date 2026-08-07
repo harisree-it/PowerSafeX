@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                              QPushButton, QListWidget, QMessageBox, QFileDialog)
 from reports.generator import ReportGenerator
+from engine.config import REPORTS_OUTPUT_DIR
 import datetime
 import os
 
@@ -63,11 +64,12 @@ class ResultsWindow(QWidget):
                 file_filter = "PDF Files (*.pdf)"
                 default_filename += ".pdf"
 
-            # 1. Ask user where to save
+            # 1. Ask user where to save (defaults to reports/output/)
+            os.makedirs(REPORTS_OUTPUT_DIR, exist_ok=True)
             file_path, _ = QFileDialog.getSaveFileName(
-                self, 
-                "Save Report As", 
-                os.path.join(os.getcwd(), default_filename), 
+                self,
+                "Save Report As",
+                os.path.join(REPORTS_OUTPUT_DIR, default_filename),
                 file_filter
             )
 

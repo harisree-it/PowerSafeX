@@ -6,175 +6,13 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
 import json
+import os
+import datetime
 from gui.styles import Theme
+from engine.config import BACKUPS_DIR
 
 # ==========================================
-# Instrument Setup Dialog
-# ==========================================
-class InstrumentSetupDialog(QDialog):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Instrument Setup")
-        self.resize(800, 400)
-        
-        layout = QVBoxLayout(self)
-        
-        # Table
-        self.table = QTableWidget()
-        self.table.setColumnCount(8)
-        self.table.setHorizontalHeaderLabels(["Name", "Type", "Address", "Max V", "Max I", "Max P", "Status", "Test"])
-        self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents) # Name
-        self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents) # Type
-        self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch) # Address
-        layout.addWidget(self.table)
-        
-        # Initial Population from Manager
-        from instruments.manager import InstrumentManager
-        self.mgr = InstrumentManager()
-        
-        self.table.setRowCount(len(self.mgr.instruments))
-        for i, inst in enumerate(self.mgr.instruments):
-            self._add_row_ui(i, inst)
-            
-        # Buttons
-        btn_layout = QHBoxLayout()
-        
-        add_btn = QPushButton("Add Instrument")
-        add_btn.clicked.connect(self.add_row)
-        btn_layout.addWidget(add_btn)
-        
-        del_btn = QPushButton("Remove Selected")
-        del_btn.clicked.connect(self.remove_row)
-        btn_layout.addWidget(del_btn)
-
-        test_btn = QPushButton("Test All Connections")
-        test_btn.clicked.connect(self.test_all)
-        btn_layout.addWidget(test_btn)
-        
-        layout.addLayout(btn_layout)
-        
-        # Dialog Buttons
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
-        buttons.accepted.connect(self.save_and_accept)
-        buttons.rejected.connect(self.reject)
-        layout.addWidget(buttons)
-        
-    def _add_row_ui(self, row, inst):
-        # Name
-        self.table.setItem(row, 0, QTableWidgetItem(inst.get("name", "New Instrument")))
-        
-        # Type
-        type_combo = QComboBox()
-        type_combo.addItems([
-            "AC Source", "DC Source", "AC/DC Source", "Bidirectional DC Supply",
-            "DC Load", "AC Load", "Scope", "Multimeter"
-        ])
-        type_combo.setCurrentText(inst.get("type", "AC Source"))
-        self.table.setCellWidget(row, 1, type_combo)
-        
-        # Address
-        self.table.setItem(row, 2, QTableWidgetItem(inst.get("address", "")))
-        
-        # Limits
-        limits = inst.get("limits", {})
-        self.table.setItem(row, 3, QTableWidgetItem(str(limits.get("V", 0))))
-        self.table.setItem(row, 4, QTableWidgetItem(str(limits.get("I", 0))))
-        self.table.setItem(row, 5, QTableWidgetItem(str(limits.get("P", 0))))
-        
-        # Status
-        status_item = QTableWidgetItem("Not Checked")
-        self.table.setItem(row, 6, status_item)
-        
-        # Test Btn
-        btn = QPushButton("Connect")
-        btn.clicked.connect(lambda checked, r=row: self.test_row(r))
-        self.table.setCellWidget(row, 7, btn)
-        
-    def add_row(self):
-        row = self.table.rowCount()
-        self.table.insertRow(row)
-        default_inst = {
-            "name": "New Instrument",
-            "type": "AC Source",
-            "address": "GPIB0::?::INSTR",
-            "limits": {"V": 0, "I": 0, "P": 0}
-        }
-        self._add_row_ui(row, default_inst)
-        
-    def remove_row(self):
-        row = self.table.currentRow()
-        if row >= 0:
-            self.table.removeRow(row)
- 
-    def test_row(self, row):
-        addr_item = self.table.item(row, 2)
-        if not addr_item: return
-        addr = addr_item.text()
-        
-        # Status column is 6
-        try:
-            from instruments.drivers import Instrument
-            # Pass the global simulation mode to avoid false positives
-            inst = Instrument(addr, simulation_mode=self.mgr.simulation_mode)
-            
-            if inst.connect():
-                 idn = inst.query_idn()
-                 self.table.item(row, 6).setText(f"OK: {idn.split(',')[0]}")
-                 
-                 # Update Name with Model from IDN
-                 # Format typically: Manufacturer,Model,Serial,Version
-                 parts = idn.split(',')
-                 if len(parts) >= 2:
-                     model_name = parts[1].strip()
-                     # Update the name column
-                     self.table.item(row, 0).setText(model_name)
-            else:
-                 self.table.item(row, 6).setText("Failed")
-        except Exception as e:
-             self.table.item(row, 6).setText(f"Error: {str(e)}")
- 
-    def test_all(self):
-        for i in range(self.table.rowCount()):
-            self.test_row(i)
-            
-    def save_and_accept(self):
-        new_list = []
-        for i in range(self.table.rowCount()):
-            name = self.table.item(i, 0).text()
-            inst_type = self.table.cellWidget(i, 1).currentText()
-            addr = self.table.item(i, 2).text()
-            
-            try:
-                v = float(self.table.item(i, 3).text())
-                c = float(self.table.item(i, 4).text())
-                p = float(self.table.item(i, 5).text())
-            except:
-                v, c, p = 0, 0, 0
-            
-            # Decide driver class based on type (Simplification)
-            driver = "Instrument"
-            if "Source" in inst_type or "Supply" in inst_type: 
-                driver = "ChromaPowerSupply"
-            elif "Load" in inst_type: 
-                driver = "ChromaElectronicLoad"
-            elif "Scope" in inst_type: 
-                driver = "TektronixScope"
-            
-            inst = {
-                "name": name,
-                "type": inst_type,
-                "driver": driver,
-                "address": addr,
-                "limits": {"V": v, "I": c, "P": p}
-            }
-            new_list.append(inst)
-            
-        self.mgr.instruments = new_list
-        self.mgr.save_config()
-        self.accept()
-
-# ==========================================
-# 2. Configuration Window
+# Configuration Window
 # ==========================================
 class ConfigWindow(QWidget):
     def __init__(self, on_next_callback, on_back_callback, on_imported_callback=None):
@@ -322,10 +160,6 @@ class ConfigWindow(QWidget):
         self.sim_mode_chk.stateChanged.connect(self.toggle_sim_mode)
         inst_form.addRow(self.sim_mode_chk)
  
-        self.setup_btn = QPushButton("Setup Instruments")
-        self.setup_btn.clicked.connect(self.open_setup_dialog)
-        inst_form.addRow(self.setup_btn)
-        
         inst_group.setLayout(inst_form)
         content_layout.addWidget(inst_group)
  
@@ -363,11 +197,6 @@ class ConfigWindow(QWidget):
         mgr.simulation_mode = (state == Qt.CheckState.Checked.value)
         mgr.save_config()
  
-    def open_setup_dialog(self):
-        dlg = InstrumentSetupDialog(self)
-        dlg.exec()
-        self.refresh_instrument_lists()
- 
     def refresh_instrument_lists(self):
         from instruments.manager import InstrumentManager
         mgr = InstrumentManager()
@@ -390,7 +219,7 @@ class ConfigWindow(QWidget):
             if req_ac_source:
                 if t in ["AC Source", "AC/DC Source"]: is_valid = True
             elif req_dc_source:
-                if t in ["DC Source", "AC/DC Source", "Bidirectional DC Supply"]: is_valid = True
+                if t in ["DC Source", "DC Supply", "AC/DC Source", "Bidirectional DC Supply"]: is_valid = True
                 
             if is_valid: valid_sources.append(inst)
             
@@ -409,7 +238,7 @@ class ConfigWindow(QWidget):
             is_valid = False
             
             if req_dc_load:
-                if t in ["DC Load", "Bidirectional DC Supply"]: is_valid = True
+                if t in ["DC Load", "Electronic Load", "Bidirectional DC Supply"]: is_valid = True
             elif req_ac_load:
                 if t in ["AC Load"]: is_valid = True
             
@@ -610,11 +439,13 @@ class ConfigWindow(QWidget):
             "selected_tests": []
         }
         
-        # 2. Open Save Dialog
+        # 2. Open Save Dialog (defaults to data/backups/)
+        os.makedirs(BACKUPS_DIR, exist_ok=True)
+        default_name = f"backup_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         file_path, _ = QFileDialog.getSaveFileName(
-            self, "Backup Settings", "", "JSON Files (*.json)"
+            self, "Backup Settings", os.path.join(BACKUPS_DIR, default_name), "JSON Files (*.json)"
         )
-        
+
         if file_path:
             try:
                 with open(file_path, 'w') as f:

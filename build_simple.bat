@@ -20,6 +20,7 @@ python -m PyInstaller --clean --noconfirm ^
     --windowed ^
     --onefile ^
     --add-data="instruments.json;." ^
+    --add-data="reports/template;reports/template" ^
     --hidden-import=pyvisa ^
     --hidden-import=PyQt6.QtCore ^
     --hidden-import=PyQt6.QtGui ^

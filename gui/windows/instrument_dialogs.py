@@ -20,11 +20,11 @@ class InstrumentDialog(QDialog):
         form_layout.addRow("Name:", self.name_input)
         
         self.type_input = QComboBox()
-        self.type_input.addItems(["Bidirectional DC Supply", "DC Supply", "Electronic Load", "Scope", "Other"])
+        self.type_input.addItems(["Bidirectional DC Supply", "DC Supply", "AC Source", "Electronic Load", "Scope", "Other"])
         form_layout.addRow("Type:", self.type_input)
         
         self.driver_input = QComboBox()
-        self.driver_input.addItems(["ChromaPowerSupply", "ChromaElectronicLoad", "TektronixScope", "Instrument"])
+        self.driver_input.addItems(["ChromaPowerSupply", "ChromaAcSource", "ChromaElectronicLoad", "TektronixScope", "Instrument"])
         form_layout.addRow("Driver:", self.driver_input)
         
         self.address_input = QLineEdit()
@@ -36,7 +36,7 @@ class InstrumentDialog(QDialog):
         # Limits Group
         limits = data.get("limits", {}) if data else {}
         
-        limits_group = QGroupBox("Safety Limits")
+        self.limits_group = QGroupBox("Safety Limits")
         limits_layout = QFormLayout()
         
         self.max_v = QDoubleSpinBox()
@@ -57,8 +57,12 @@ class InstrumentDialog(QDialog):
         self.max_p.setSuffix(" W")
         limits_layout.addRow("Max Power:", self.max_p)
         
-        limits_group.setLayout(limits_layout)
-        layout.addWidget(limits_group)
+        self.limits_group.setLayout(limits_layout)
+        layout.addWidget(self.limits_group)
+        
+        # Hide safety limits for measurement-only instruments (Scope)
+        self.type_input.currentTextChanged.connect(self._on_type_changed)
+        self._on_type_changed(self.type_input.currentText())
         
         # Pre-fill data if available
         if data:
@@ -73,15 +77,29 @@ class InstrumentDialog(QDialog):
         self.buttons.rejected.connect(self.reject)
         layout.addWidget(self.buttons)
         
+    def _on_type_changed(self, type_text):
+        """Hide safety limits for Scope (measurement-only instrument)."""
+        is_scope = type_text == "Scope"
+        self.limits_group.setVisible(not is_scope)
+        # Shrink dialog when limits are hidden
+        if is_scope:
+            self.resize(400, 280)
+        else:
+            self.resize(400, 500)
+
     def get_data(self):
-        return {
+        result = {
             "name": self.name_input.text(),
             "type": self.type_input.currentText(),
             "driver": self.driver_input.currentText(),
             "address": self.address_input.text(),
-            "limits": {
+        }
+        # Only include limits for instruments that have outputs
+        no_limits_types = {"Scope"}
+        if self.type_input.currentText() not in no_limits_types:
+            result["limits"] = {
                 "V": self.max_v.value(),
                 "I": self.max_i.value(),
                 "P": self.max_p.value()
             }
-        }
+        return result

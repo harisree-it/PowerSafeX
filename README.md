@@ -37,8 +37,14 @@ The project is structured into modular components for scalability and maintainab
 - `gui/`: Contains standard stylesheet definitions (`styles.py`) and all PyQt6 window classes (`windows/`):
   - `welcome.py`, `config.py`, `test_selection.py`, `execution.py`, `results.py`, `instrument_setup.py`, `block_editor.py`.
 - `instruments/`: Manages hardware communication (`manager.py`, `drivers.py`) using PyVISA, with specific instrument command implementations in subdirectories (e.g., `chroma/`).
-- `reports/`: Handles the parsing of test results and generating Word/PDF documents based on the template in this directory.
+- `reports/`: Report generation (`generator.py`), split into:
+  - `reports/template/`: The source `.docx` template used to render reports (tracked in git).
+  - `reports/output/`: Generated `.docx`/`.pdf` reports (git-ignored).
+  - `reports/captures/`: Scope screenshots captured during test runs (git-ignored).
 - `tests/`: Contains the concrete test sequence logic. All tests inherit from the `BaseTest` class.
+- `data/`: Runtime user data — saved block sequences and "Backup Settings" JSON exports (`data/backups/`). Git-ignored.
+- `scripts/`: Standalone developer/debug utilities (instrument scanning, connection tests) — not part of the automated test suite.
+- `docs/`: Supplementary documentation (build guide, troubleshooting notes).
 
 ---
 
@@ -90,7 +96,7 @@ Simply double-click `build_simple.bat`. The executable will be generated in the 
 pyinstaller --clean --noconfirm --name=TestAutomationGUI --windowed --onefile --add-data="instruments.json;." main.py
 ```
 
-For more detailed build instructions, please refer to the [`BUILD_GUIDE.md`](BUILD_GUIDE.md).
+For more detailed build instructions, please refer to the [`docs/BUILD_GUIDE.md`](docs/BUILD_GUIDE.md).
 
 ---
 

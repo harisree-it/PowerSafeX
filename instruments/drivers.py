@@ -250,6 +250,41 @@ class ChromaPowerSupply(Instrument):
         if self.simulation_mode:
             print(f"[PowerSupply] Output OFF")
         self.write(self.cmd.format_command(self.cmd.CONFIGURE_OUTPUT, "OFF"))
+
+    # --- Load Interface Aliases for Bidirectional Use ---
+    def set_mode(self, mode):
+        """Alias for load compatibility. Switches Bidirectional supply to LOAD mode."""
+        self._is_load_mode = True
+        if self.simulation_mode:
+            print(f"[PowerSupply] Set Mode (Bidirectional): {mode}")
+        self.write(self.cmd.format_command(self.cmd.SYSTEM_MODE, "LOAD"))
+
+    def set_current(self, current):
+        """Alias for set_current_limit when used as a load"""
+        if getattr(self, '_is_load_mode', False):
+            self._current_limit = float(current)
+            if self.simulation_mode:
+                print(f"[PowerSupply] Set Load Current: {self._current_limit}A")
+            self.write(self.cmd.format_command(self.cmd.LOAD_CURRENT, self._current_limit))
+        else:
+            self.set_current_limit(current)
+
+    def set_power(self, power):
+        """Alias for set_power_limit when used as a load"""
+        if getattr(self, '_is_load_mode', False):
+            if self.simulation_mode:
+                print(f"[PowerSupply] Set Load Power: {power}W")
+            self.write(self.cmd.format_command(self.cmd.LOAD_POWER, power))
+        else:
+            self.set_power_limit(power)
+
+    def load_on(self):
+        """Alias for output_on"""
+        self.output_on()
+
+    def load_off(self):
+        """Alias for output_off"""
+        self.output_off()
     
     def measure_voltage(self):
         """Measure output voltage"""
@@ -355,7 +390,175 @@ class ChromaPowerSupply(Instrument):
         else:
             return float(self.query("MEASure:POWer:PF?"))
 
+
+class ChromaAcSource(Instrument):
+    """Driver for Chroma 61500 Series AC Power Source (61501/61505/61507/61509/61512).
+
+    Maps to mgr.ac_source when the instrument type is 'AC Source'.
+    SCPI reference: Chroma 61500 Series Programming Manual.
+    """
+
+    def __init__(self, resource_name, simulation_mode=True, model="61509", logger=None, on_error=None):
+        super().__init__(resource_name, simulation_mode, logger=logger, on_error=on_error)
+        self.model = model
+
+        from instruments.chroma import get_command_set
+        self.cmd = get_command_set(model)
+        if self.cmd is None:
+            raise ValueError(f"Unknown Chroma AC source model: {model}")
+
+        # Simulation state
+        self._voltage  = 0.0
+        self._freq     = 50.0
+        self._current_limit = 0.0
+        self._output_on = False
+        self._waveform = "SINE"
+        self._phase    = 0.0
+
+    # ── Output Control ────────────────────────────────────────────
+    def output_on(self):
+        """Enable AC output — SCPI: OUTPut:STATe ON"""
+        self._output_on = True
+        self.write(self.cmd.format_command(self.cmd.OUTPUT_STATE, "ON"))
+
+    def output_off(self):
+        """Disable AC output — SCPI: OUTPut:STATe OFF"""
+        self._output_on = False
+        self.write(self.cmd.format_command(self.cmd.OUTPUT_STATE, "OFF"))
+
+    # ── Voltage ───────────────────────────────────────────────────
+    def set_voltage(self, voltage):
+        """Set RMS output voltage — SCPI: SOURce:VOLTage:LEVel <V>"""
+        self._voltage = float(voltage)
+        self.write(self.cmd.format_command(self.cmd.SOURCE_VOLTAGE_LEVEL, self._voltage))
+
+    def set_voltage_range(self, range_str):
+        """Set voltage range — SCPI: SOURce:VOLTage:RANGe LOW|HIGH"""
+        self.write(self.cmd.format_command(self.cmd.SOURCE_VOLTAGE_RANGE, range_str.upper()))
+
+    def set_voltage_slew(self, rate):
+        """Set voltage slew rate (V/s) — SCPI: SOURce:VOLTage:SLEW <rate>"""
+        self.write(self.cmd.format_command(self.cmd.SOURCE_VOLTAGE_SLEW, rate))
+
+    def set_ovp(self, voltage):
+        """Set OVP threshold — SCPI: SOURce:VOLTage:PROTect:LEVel <V>"""
+        self.write(self.cmd.format_command(self.cmd.SOURCE_OVP, voltage))
+
+    # ── Frequency ─────────────────────────────────────────────────
+    def set_frequency(self, freq):
+        """Set output frequency (Hz) — SCPI: SOURce:FREQuency:LEVel <Hz>"""
+        self._freq = float(freq)
+        self.write(self.cmd.format_command(self.cmd.SOURCE_FREQUENCY_LEVEL, self._freq))
+
+    def set_frequency_slew(self, rate):
+        """Set frequency slew rate (Hz/s) — SCPI: SOURce:FREQuency:SLEW <rate>"""
+        self.write(self.cmd.format_command(self.cmd.SOURCE_FREQUENCY_SLEW, rate))
+
+    # ── Current / Protection ──────────────────────────────────────
+    def set_current_limit(self, current):
+        """Set RMS current limit — SCPI: SOURce:CURRent:LIMit <A>"""
+        self._current_limit = float(current)
+        self.write(self.cmd.format_command(self.cmd.SOURCE_CURRENT_LIMIT, self._current_limit))
+
+    def set_ocp(self, current):
+        """Set OCP threshold — SCPI: SOURce:CURRent:PROTect:LEVel <A>"""
+        self.write(self.cmd.format_command(self.cmd.SOURCE_OCP, current))
+
+    def clear_protection(self):
+        """Clear latched protection — SCPI: SOURce:PROTect:CLEar"""
+        self.write(self.cmd.SOURCE_PROTECT_CLEAR)
+
+    # ── Phase ─────────────────────────────────────────────────────
+    def set_phase(self, angle):
+        """Set output phase angle (0–360 deg) — SCPI: SOURce:PHASe:ANGLe <deg>"""
+        self._phase = float(angle)
+        self.write(self.cmd.format_command(self.cmd.SOURCE_PHASE_ANGLE, self._phase))
+
+    def set_phase_on(self, angle):
+        """Set phase at output-on — SCPI: SOURce:PHASe:STARt <deg>"""
+        self.write(self.cmd.format_command(self.cmd.SOURCE_PHASE_START, angle))
+
+    def set_phase_off(self, angle):
+        """Set phase at output-off — SCPI: SOURce:PHASe:STOP <deg>"""
+        self.write(self.cmd.format_command(self.cmd.SOURCE_PHASE_STOP, angle))
+
+    # ── Waveform ──────────────────────────────────────────────────
+    def set_waveform(self, shape):
+        """Set output waveform shape — SCPI: SOURce:WAVeform:SHAPe SINE|SQUare|USER<n>"""
+        self._waveform = shape.upper()
+        self.write(self.cmd.format_command(self.cmd.SOURCE_WAVEFORM_SHAPE, self._waveform))
+
+    # ── Measurements ──────────────────────────────────────────────
+    def measure_voltage(self):
+        """Measure RMS output voltage — SCPI: MEASure:VOLTage:RMS?"""
+        if self.simulation_mode:
+            self.query(self.cmd.MEASURE_VOLTAGE_RMS)
+            return self._voltage + random.uniform(-0.2, 0.2)
+        return float(self.query(self.cmd.MEASURE_VOLTAGE_RMS))
+
+    def measure_current(self):
+        """Measure RMS output current — SCPI: MEASure:CURRent:RMS?"""
+        if self.simulation_mode:
+            self.query(self.cmd.MEASURE_CURRENT_RMS)
+            return (self._current_limit * 0.7 + random.uniform(-0.05, 0.05)) if self._output_on else 0.0
+        return float(self.query(self.cmd.MEASURE_CURRENT_RMS))
+
+    def measure_current_peak(self):
+        """Measure peak output current — SCPI: MEASure:CURRent:PEAK?"""
+        if self.simulation_mode:
+            self.query(self.cmd.MEASURE_CURRENT_PEAK)
+            return self.measure_current() * 1.414
+        return float(self.query(self.cmd.MEASURE_CURRENT_PEAK))
+
+    def measure_power(self):
+        """Measure real (active) power (W) — SCPI: MEASure:POWer:REAL?"""
+        if self.simulation_mode:
+            self.query(self.cmd.MEASURE_POWER_REAL)
+            return self._voltage * self.measure_current() * 0.95
+        return float(self.query(self.cmd.MEASURE_POWER_REAL))
+
+    def measure_apparent_power(self):
+        """Measure apparent power (VA) — SCPI: MEASure:POWer:APParent?"""
+        if self.simulation_mode:
+            self.query(self.cmd.MEASURE_POWER_APPARENT)
+            return self._voltage * self.measure_current()
+        return float(self.query(self.cmd.MEASURE_POWER_APPARENT))
+
+    def measure_pf(self):
+        """Measure power factor — SCPI: MEASure:POWer:PFACtor?"""
+        if self.simulation_mode:
+            self.query(self.cmd.MEASURE_POWER_FACTOR)
+            return 0.95 + random.uniform(-0.02, 0.02)
+        return float(self.query(self.cmd.MEASURE_POWER_FACTOR))
+
+    def measure_frequency(self):
+        """Measure actual output frequency — SCPI: MEASure:FREQuency?"""
+        if self.simulation_mode:
+            self.query(self.cmd.MEASURE_FREQUENCY)
+            return self._freq + random.uniform(-0.01, 0.01)
+        return float(self.query(self.cmd.MEASURE_FREQUENCY))
+
+    def measure_crest_factor(self):
+        """Measure current crest factor — SCPI: MEASure:CURRent:CREStfactor?"""
+        if self.simulation_mode:
+            self.query(self.cmd.MEASURE_CREST_FACTOR)
+            return 1.414 + random.uniform(-0.05, 0.05)
+        return float(self.query(self.cmd.MEASURE_CREST_FACTOR))
+
+    def get_status(self):
+        """Query error queue — SCPI: SYSTem:ERRor?"""
+        if self.simulation_mode:
+            self.query(self.cmd.SYSTEM_ERROR)
+            return "0,No error"
+        return self.query(self.cmd.SYSTEM_ERROR)
+
+    def reset(self):
+        """Reset to factory defaults — SCPI: *RST"""
+        self.write(self.cmd.RST)
+
+
 class ChromaElectronicLoad(Instrument):
+
     def __init__(self, resource_name, simulation_mode=True, logger=None, on_error=None):
         super().__init__(resource_name, simulation_mode, logger=logger, on_error=on_error)
         self._mode = "CC"
@@ -372,10 +575,7 @@ class ChromaElectronicLoad(Instrument):
     def set_mode(self, mode):
         self._mode = mode
         print(f"[E-Load] Set Mode: {mode}")
-        # Basic mapping, might need specific commands per model
-        mode_map = {"CC": "CURR", "CV": "VOLT", "CR": "RES", "CP": "POW"}
-        cmd_str = mode_map.get(mode, "CURR")
-        self.write(f"MODE {cmd_str}")
+        self.write(f"CONF:MODE {mode}")
         
     def set_current(self, current):
         self._value = float(current)
@@ -416,13 +616,21 @@ class ChromaElectronicLoad(Instrument):
 
     def set_slew_rate(self, rate):
         print(f"[E-Load] Set Slew Rate: {rate}A/us")
+        self.write(f"CURR:STAT:RISE {rate}")
+        self.write(f"CURR:STAT:FALL {rate}")
         self.write(f"CURR:DYN:RISE {rate}")
         self.write(f"CURR:DYN:FALL {rate}")
 
     def set_dynamic_mode(self, enable):
-        state = "ON" if enable else "OFF"
-        print(f"[E-Load] Dynamic Mode: {state}")
-        self.write(f"CURR:DYN {state}")
+        print(f"[E-Load] Dynamic Mode: {'ON' if enable else 'OFF'}")
+        if self._mode == "CC":
+            mode_str = "CCD" if enable else "CC"
+            self.write(f"CONF:MODE {mode_str}")
+        elif self._mode == "CR":
+            mode_str = "CRD" if enable else "CR"
+            self.write(f"CONF:MODE {mode_str}")
+        else:
+            print(f"[E-Load] Dynamic Mode not supported for {self._mode}")
 
     def clear_protection(self):
         print("[E-Load] Clear Protection")
@@ -430,15 +638,15 @@ class ChromaElectronicLoad(Instrument):
 
     def set_ocp(self, current):
          print(f"[E-Load] Set OCP: {current}A")
-         self.write(f"CURR:PROT {current}")
+         self.write(f"CONF:CURR:PROT {current}")
 
     def set_ovp(self, voltage):
          print(f"[E-Load] Set OVP: {voltage}V")
-         self.write(f"VOLT:PROT {voltage}")
+         self.write(f"CONF:VOLT:PROT {voltage}")
 
     def set_opp(self, power):
          print(f"[E-Load] Set OPP: {power}W")
-         self.write(f"POW:PROT {power}")
+         self.write(f"CONF:POW:PROT {power}")
         
     def measure_voltage(self):
         # In simulation, we need to know what the Source is doing
@@ -588,95 +796,177 @@ class TektronixScope(Instrument):
             return float(self.query(f"MEASU:MEAS{meas_num}:VAL?"))
 
     def save_screenshot(self, filename):
-        print(f"[Scope] Request to save screenshot to {filename}")
-        
-        # Ensure directory exists locally
-        if not os.path.exists(os.path.dirname(filename)):
-            os.makedirs(os.path.dirname(filename), exist_ok=True)
-            
+        """Capture a scope screenshot and save it to a local file.
+
+        Strategy (Tektronix MSO/DPO series):
+          1. Primary: HARDCopy — scope streams PNG binary directly over USB.
+             The response is an IEEE 488.2 definite-length block (#<N><len><bytes>)
+             or raw PNG bytes; we handle both cases.
+          2. Fallback: SAVE:IMAGe to scope internal C:/temp.png, wait, then
+             FILESystem:READFile with manual IEEE-header stripping.
+
+        The image is always saved to `filename` on the local PC.
+        """
+        import os
+        print(f"[Scope] Screenshot requested → {filename}")
+        os.makedirs(os.path.dirname(os.path.abspath(filename)), exist_ok=True)
+
+        # ── Simulation mode ──────────────────────────────────────────────────
         if self.simulation_mode:
-            # Create a dummy image
-            print("[Scope] Simulation mode: Generating mock image.")
-            self.write(f'SAVE:IMAGe "{filename}"') # Log intended command
-            from PIL import Image, ImageDraw
-            img = Image.new('RGB', (800, 600), color = (73, 109, 137))
-            d = ImageDraw.Draw(img)
-            d.text((10,10), f"Mock Scope Screenshot\n{filename}", fill=(255,255,0))
-            points = []
-            for x in range(0, 800, 10):
-                y = 300 + 100 * np.sin(x/50)
-                points.append((x, y))
-            d.line(points, fill=(0, 255, 0), width=3)
-            img.save(filename)
+            print("[Scope] Simulation: generating mock screenshot.")
+            self.write('SAVE:IMAGe "C:/temp.png"')   # log command only
+            try:
+                from PIL import Image, ImageDraw
+                img = Image.new('RGB', (800, 600), color=(30, 40, 60))
+                d = ImageDraw.Draw(img)
+                d.text((10, 10), f"[SIM] Scope Screenshot\n{filename}", fill=(0, 255, 128))
+                pts = [(x, 300 + int(100 * np.sin(x / 50))) for x in range(0, 800, 5)]
+                d.line(pts, fill=(0, 255, 0), width=2)
+                img.save(filename)
+                print(f"[Scope] Simulation screenshot saved: {filename}")
+            except ImportError:
+                # PIL not available — write a 1x1 blank PNG
+                _blank_png = (
+                    b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01'
+                    b'\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00'
+                    b'\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18'
+                    b'\xd8N\x00\x00\x00\x00IEND\xaeB`\x82'
+                )
+                with open(filename, 'wb') as f:
+                    f.write(_blank_png)
             return
 
-        # Real instrument screenshot capture - ROBUST MANUAL SEQUENCING
-        try:
-            print("[Scope] Starting screenshot capture (Robust PyVISA Method)...")
-            
-            # 1. Use internal Tek path (C: maps to internal storage on Linux scopes)
-            # Simple filename to avoid path issues
-            scope_temp_file = "C:/temp.png"
-            
-            # 2. Cleanup previous
-            try:
-                self.write(f'FILESystem:DELEte "{scope_temp_file}"')
-                time.sleep(0.5)
-            except:
-                pass
+        # ── Real instrument ───────────────────────────────────────────────────
+        raw_data = None
 
-            # 3. Configure
+        # ── Method 1: HARDCopy direct streaming ──────────────────────────────
+        try:
+            print("[Scope] Method 1: HARDCopy direct stream…")
+            instr = self.instr
+
+            # Configure image format
+            self.write("HARDCopy:PORT USB")
+            self.write("SAVE:IMAG:FILEF PNG")
+            self.write("HARDCOPY INKSAVER, OFF")
+            time.sleep(0.3)
+
+            # Initiate and read the binary response
+            instr.write("HARDCopy STARt")
+
+            # Use read_raw with a generous timeout and disable termination for binary transfer
+            old_timeout = instr.timeout
+            old_term = instr.read_termination
+            instr.timeout = 30000   # 30 s — scope needs time to render
+            instr.read_termination = None
             try:
+                raw_bytes = instr.read_raw()
+            finally:
+                instr.timeout = old_timeout
+                instr.read_termination = old_term
+
+            if raw_bytes:
+                raw_data = self._strip_ieee_header(raw_bytes)
+                if raw_data and raw_data[:4] == b'\x89PNG':
+                    print(f"[Scope] HARDCopy stream OK: {len(raw_data)} bytes")
+                else:
+                    print("[Scope] HARDCopy data did not look like PNG — trying fallback")
+                    raw_data = None
+        except Exception as hc_err:
+            print(f"[Scope] HARDCopy method failed: {hc_err} — trying fallback")
+            raw_data = None
+
+        # ── Method 2: SAVE:IMAGe → FILESystem:READFile ──────────────────────
+        if raw_data is None:
+            try:
+                print("[Scope] Method 2: SAVE:IMAGe + FILESystem:READFile…")
+                scope_path = "C:/temp_cap.png"
+                instr = self.instr
+
+                # Delete any stale file
+                try:
+                    self.write(f'FILESystem:DELEte "{scope_path}"')
+                    time.sleep(0.3)
+                except Exception:
+                    pass
+
                 self.write("HEADER OFF")
                 self.write("SAVE:IMAG:FILEF PNG")
-            except:
-                pass
+                self.write(f'SAVE:IMAGe "{scope_path}"')
 
-            # 4. Save to internal storage
-            print(f"[Scope] Saving to internal path: {scope_temp_file}")
-            self.write(f'SAVE:IMAGe "{scope_temp_file}"')
-            
-            # 5. Wait for operation (Non-blocking sleep is safer than *OPC? on busy scope)
-            time.sleep(5.0) 
-            
-            # 6. Check error queue
-            try:
-               err = self.query("SYSTem:ERRor?")
-               if "No error" not in err and "0," not in err:
-                   print(f"[Scope] Warning after save: {err}")
-            except:
-                pass
-                
-            # 7. Transfer file
-            print(f"[Scope] Transferring file...")
-            # Use query_binary_values which handles the #<header> logic automatically
-            raw_data_list = self.instr.query_binary_values(
-                f'FILESystem:READFile "{scope_temp_file}"', 
-                datatype='B', 
-                header_fmt='ieee',
-                is_big_endian=False,
-                chunk_size=102400
-            )
-            
-            raw_data = bytes(raw_data_list)
-            
-            if not raw_data:
-                 # Try traditional read_raw fallback if above fails? 
-                 # Usually query_binary_values is safest for Tek.
-                 raise Exception("No data received from scope file read")
+                # Wait for the file to be written — use *OPC? with a long timeout
+                old_timeout = instr.timeout
+                instr.timeout = 30000
+                try:
+                    instr.query("*OPC?")
+                except Exception:
+                    time.sleep(5)   # fallback if OPC? not supported
+                finally:
+                    instr.timeout = old_timeout
 
-            # 8. Save locally
-            with open(filename, "wb") as f:
-                f.write(raw_data)
-                
-            print(f"[Scope] Screenshot saved to {filename}: {len(raw_data)} bytes")
-            
-            # 9. Cleanup
-            self.write(f'FILESystem:DELEte "{scope_temp_file}"')
-                
-        except Exception as e:
-            print(f"[Scope] CRITICAL FAILURE in save_screenshot: {e}")
-            raise
+                # Read the file — use read_raw to get IEEE block, then strip header
+                old_timeout = instr.timeout
+                old_term = instr.read_termination
+                instr.timeout = 30000
+                instr.read_termination = None
+                try:
+                    instr.write(f'FILESystem:READFile "{scope_path}"')
+                    raw_bytes = instr.read_raw()
+                finally:
+                    instr.timeout = old_timeout
+                    instr.read_termination = old_term
+
+                raw_data = self._strip_ieee_header(raw_bytes)
+
+                if raw_data and raw_data[:4] == b'\x89PNG':
+                    print(f"[Scope] FILESystem:READFile OK: {len(raw_data)} bytes")
+                else:
+                    raise Exception(
+                        f"Received {len(raw_bytes)} bytes but PNG header not found. "
+                        f"First bytes: {raw_bytes[:16]!r}"
+                    )
+
+                # Cleanup scope-side file
+                try:
+                    self.write(f'FILESystem:DELEte "{scope_path}"')
+                except Exception:
+                    pass
+
+            except Exception as fb_err:
+                raise RuntimeError(
+                    f"All screenshot methods failed.\n"
+                    f"Last error: {fb_err}"
+                ) from fb_err
+
+        # ── Write to local PC ─────────────────────────────────────────────────
+        with open(filename, "wb") as fh:
+            fh.write(raw_data)
+        print(f"[Scope] Screenshot saved: {filename}  ({len(raw_data):,} bytes)")
+
+    @staticmethod
+    def _strip_ieee_header(data: bytes) -> bytes:
+        """Strip an IEEE 488.2 definite-length block header from binary data.
+
+        A definite-length block starts with '#' followed by one digit (N)
+        indicating how many digits describe the byte count, followed by N
+        digits giving the byte count, followed by the actual data.
+        Example:  #7 0004096 <bytes...>
+        If no '#' header is present, the raw data is returned as-is.
+        """
+        if not data:
+            return data
+        # Find '#' — it should be at the very beginning (allow a few bytes for stray whitespace)
+        idx = data.find(b'#')
+        if idx == -1 or idx > 5:
+            return data   # no IEEE header at start — return raw
+        try:
+            n_digits = int(chr(data[idx + 1]))
+            byte_count = int(data[idx + 2: idx + 2 + n_digits])
+            payload_start = idx + 2 + n_digits
+            return data[payload_start: payload_start + byte_count]
+        except Exception:
+            return data   # can't parse header — return everything
+
+
 
             
 

@@ -12,6 +12,7 @@ if __name__ == '__main__':
         '--icon=assets/icon.ico',           # Application icon (if available)
         '--add-data=assets;assets',         # Include assets folder
         '--add-data=instruments.json;.',    # Include config file
+        '--add-data=reports/template;reports/template',  # Include report template
         '--hidden-import=pyvisa',           # Ensure pyvisa is included
         '--hidden-import=PyQt6',            # Ensure PyQt6 is included
         '--hidden-import=matplotlib',       # Ensure matplotlib is included

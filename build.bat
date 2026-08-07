@@ -33,6 +33,7 @@ pyinstaller --clean ^
     --onefile ^
     --add-data="assets;assets" ^
     --add-data="instruments.json;." ^
+    --add-data="reports/template;reports/template" ^
     --hidden-import=pyvisa ^
     --hidden-import=PyQt6 ^
     --hidden-import=matplotlib ^

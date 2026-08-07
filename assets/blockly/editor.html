@@ -14,20 +14,23 @@
       width: 100%;
     }
   </style>
-  <script src="blockly_compressed.js?v=20260210"></script>
-  <script src="blocks_compressed.js?v=20260210"></script>
-  <script src="python_compressed.js?v=20260210"></script>
-  <script src="en.js?v=20260210"></script>
+  <script src="blockly_compressed.js?v=20260806"></script>
+  <script src="blocks_compressed.js?v=20260806"></script>
+  <script src="python_compressed.js?v=20260806"></script>
+  <script src="en.js?v=20260806"></script>
 </head>
 
 <body>
   <div
-    style="position: absolute; top:0; right:0; background: red; color: white; padding: 2px 5px; font-size: 10px; z-index: 9999; opacity: 0.7;">
-    v1615
+    style="position: absolute; top:0; right:0; background: #1a6e3c; color: white; padding: 2px 8px; font-size: 10px; z-index: 9999; opacity: 0.85; border-bottom-left-radius:4px;">
+    v20260806
   </div>
   <div id="blocklyDiv"></div>
 
+  <!-- ===== TOOLBOX DEFINITION ===== -->
   <xml xmlns="https://developers.google.com/blockly/xml" id="toolbox" style="display: none">
+
+    <!-- ── Standard Logic ── -->
     <category name="Logic" colour="210">
       <block type="controls_if"></block>
       <block type="logic_compare"></block>
@@ -37,6 +40,8 @@
       <block type="logic_null"></block>
       <block type="logic_ternary"></block>
     </category>
+
+    <!-- ── Standard Loops ── -->
     <category name="Loops" colour="120">
       <block type="controls_repeat_ext"></block>
       <block type="controls_whileUntil"></block>
@@ -44,6 +49,8 @@
       <block type="controls_forEach"></block>
       <block type="controls_flow_statements"></block>
     </category>
+
+    <!-- ── Standard Math ── -->
     <category name="Math" colour="230">
       <block type="math_number"></block>
       <block type="math_arithmetic"></block>
@@ -57,8 +64,9 @@
       <block type="math_constrain"></block>
       <block type="math_random_int"></block>
       <block type="math_random_float"></block>
-      <block type="math_atan2"></block>
     </category>
+
+    <!-- ── Standard Text ── -->
     <category name="Text" colour="160">
       <block type="text"></block>
       <block type="text_join"></block>
@@ -71,50 +79,201 @@
       <block type="text_changeCase"></block>
       <block type="text_trim"></block>
       <block type="text_print"></block>
-      <block type="text_prompt_ext"></block>
     </category>
+
     <category name="Variables" colour="330" custom="VARIABLE"></category>
     <category name="Functions" colour="290" custom="PROCEDURE"></category>
+
     <sep></sep>
-    <category name="Source" colour="20">
-      <block type="inst_set_voltage"></block>
-      <block type="inst_set_frequency"></block>
-      <block type="inst_source_measure_voltage"></block>
-      <block type="inst_source_measure_current"></block>
-      <block type="inst_source_slew_rate"></block>
-      <block type="inst_source_protections"></block>
+
+    <!-- ──────────────────────────────────────────
+         SOURCE  (AC/DC Power Supply — Chroma 62000D)
+         Colour 20 = warm orange
+    ────────────────────────────────────────── -->
+    <category name="⚡ Source" colour="20">
+
+      <!-- Output Control -->
+      <label text="— Output Control —"></label>
       <block type="inst_output_on"></block>
       <block type="inst_output_off"></block>
+
+      <!-- Setpoints -->
+      <label text="— Setpoints —"></label>
+      <block type="inst_set_voltage"></block>
+      <block type="inst_set_current_limit"></block>
+      <block type="inst_set_frequency"></block>
+      <block type="inst_set_power_limit"></block>
+
+      <!-- Ramp Rates -->
+      <label text="— Ramp / Slew Rates —"></label>
+      <block type="inst_source_slew_rate"></block>
+      <block type="inst_source_current_slew"></block>
+      <block type="inst_source_voltage_rise"></block>
+      <block type="inst_source_voltage_fall"></block>
+
+      <!-- Protections -->
+      <label text="— Protections —"></label>
+      <block type="inst_source_protections"></block>
+      <block type="inst_source_set_ovp"></block>
+      <block type="inst_source_set_ocp"></block>
+      <block type="inst_source_clear_protection"></block>
+
+      <!-- Measurements -->
+      <label text="— Measurements —"></label>
+      <block type="inst_source_measure_voltage"></block>
+      <block type="inst_source_measure_current"></block>
+      <block type="inst_source_measure_power"></block>
+      <block type="inst_source_measure_freq"></block>
+      <block type="inst_source_measure_apparent"></block>
+      <block type="inst_source_measure_pf"></block>
+
+      <!-- Utility -->
+      <label text="— Utility —"></label>
+      <block type="inst_source_reset"></block>
     </category>
-    <category name="Load" colour="120">
-      <block type="inst_load_mode"></block>
-      <block type="inst_load_set_current"></block>
-      <block type="inst_load_measure_voltage"></block>
-      <block type="inst_load_measure_current"></block>
+
+    <!-- ──────────────────────────────────────────
+         LOAD  (Electronic Load — Chroma 63200A / 6310A)
+         Colour 0 = red-orange
+    ────────────────────────────────────────── -->
+    <category name="🔋 Load" colour="0">
+
+      <!-- Input Control -->
+      <label text="— Input Control —"></label>
       <block type="inst_load_output_on"></block>
       <block type="inst_load_output_off"></block>
+
+      <!-- Mode & Setpoints -->
+      <label text="— Mode &amp; Setpoints —"></label>
+      <block type="inst_load_mode"></block>
+      <block type="inst_load_set_current"></block>
+      <block type="inst_load_set_voltage"></block>
+      <block type="inst_load_set_power"></block>
+      <block type="inst_load_set_resistance"></block>
+
+      <!-- Dynamic -->
+      <label text="— Dynamic / Transient —"></label>
+      <block type="inst_load_slew_rate"></block>
+      <block type="inst_load_dynamic"></block>
+
+      <!-- Protections -->
+      <label text="— Protections —"></label>
+      <block type="inst_load_protections"></block>
+      <block type="inst_load_set_ovp"></block>
+      <block type="inst_load_set_ocp"></block>
+      <block type="inst_load_set_opp"></block>
+      <block type="inst_load_clear_protection"></block>
+
+      <!-- Measurements -->
+      <label text="— Measurements —"></label>
+      <block type="inst_load_measure_voltage"></block>
+      <block type="inst_load_measure_current"></block>
+      <block type="inst_load_measure_resistance"></block>
     </category>
-    <category name="Scope" colour="200">
+
+    <!-- ──────────────────────────────────────────
+         SCOPE  (Oscilloscope — Tektronix MSO44B)
+         Colour 200 = teal-blue
+    ────────────────────────────────────────── -->
+    <category name="📈 Scope" colour="200">
+
+      <!-- Acquisition -->
+      <label text="— Acquisition —"></label>
       <block type="inst_scope_autoscale"></block>
+      <block type="inst_scope_run_stop"></block>
       <block type="inst_scope_save_screenshot"></block>
+
+      <!-- Timebase -->
+      <label text="— Timebase —"></label>
       <block type="inst_scope_timebase"></block>
+      <block type="inst_scope_delay"></block>
+
+      <!-- Channel Setup -->
+      <label text="— Channel Setup —"></label>
+      <block type="inst_scope_channel_enable"></block>
       <block type="inst_scope_vertical"></block>
+      <block type="inst_scope_offset"></block>
       <block type="inst_scope_coupling"></block>
       <block type="inst_scope_bandwidth"></block>
+
+      <!-- Trigger -->
+      <label text="— Trigger —"></label>
       <block type="inst_scope_trigger"></block>
+
+      <!-- Measurements -->
+      <label text="— Measurements —"></label>
       <block type="inst_scope_configure_meas"></block>
       <block type="inst_scope_get_meas"></block>
     </category>
-    <category name="DMM" colour="0">
-      <block type="inst_dmm_measure_voltage"></block>
-      <block type="inst_dmm_measure_current"></block>
-    </category>
-    <category name="System" colour="290">
+
+    <!-- ──────────────────────────────────────────
+         SYSTEM  (Utility / Flow Control)
+         Colour 290 = purple
+    ────────────────────────────────────────── -->
+    <category name="⚙ System" colour="290">
       <block type="inst_wait"></block>
       <block type="inst_get_param"></block>
       <block type="inst_log"></block>
     </category>
+
+    <!-- ──────────────────────────────────────────
+         AC SOURCE  (Chroma 61500 Series — 61509)
+         Colour 195 = teal-blue
+    ────────────────────────────────────────── -->
+    <category name="⚡ AC Source" colour="195">
+
+      <!-- Quick Configure -->
+      <label text="— Quick Configure —"></label>
+      <block type="ac_configure"></block>
+
+      <!-- Output Control -->
+      <label text="— Output Control —"></label>
+      <block type="ac_output_on"></block>
+      <block type="ac_output_off"></block>
+
+      <!-- Voltage -->
+      <label text="— Voltage —"></label>
+      <block type="ac_set_voltage"></block>
+      <block type="ac_set_voltage_range"></block>
+      <block type="ac_set_voltage_slew"></block>
+
+      <!-- Frequency -->
+      <label text="— Frequency —"></label>
+      <block type="ac_set_frequency"></block>
+      <block type="ac_set_frequency_slew"></block>
+
+      <!-- Current / Phase / Waveform -->
+      <label text="— Current / Phase / Waveform —"></label>
+      <block type="ac_set_current_limit"></block>
+      <block type="ac_set_phase"></block>
+      <block type="ac_set_phase_on_off"></block>
+      <block type="ac_set_waveform"></block>
+
+      <!-- Protections -->
+      <label text="— Protections —"></label>
+      <block type="ac_set_ovp"></block>
+      <block type="ac_set_ocp"></block>
+      <block type="ac_clear_protection"></block>
+
+      <!-- Measurements -->
+      <label text="— Measurements —"></label>
+      <block type="ac_measure_voltage"></block>
+      <block type="ac_measure_current"></block>
+      <block type="ac_measure_current_peak"></block>
+      <block type="ac_measure_power"></block>
+      <block type="ac_measure_apparent_power"></block>
+      <block type="ac_measure_pf"></block>
+      <block type="ac_measure_frequency"></block>
+      <block type="ac_measure_crest_factor"></block>
+
+      <!-- Utility -->
+      <label text="— Utility —"></label>
+      <block type="ac_get_status"></block>
+      <block type="ac_reset"></block>
+    </category>
+
   </xml>
+  <!-- ===== END TOOLBOX ===== -->
 
   <script>
     var AVAILABLE_PARAMS = [["No Params Available", "NONE"]];
@@ -128,11 +287,10 @@
       }
     }
 
-    // STAMP: 2026-02-10_1615
-    // Compatibility for newer Blockly versions (v10+)
+    // STAMP: 20260806
+    // Compatibility proxy for Blockly Python generator
     var realGenerator = Blockly.Python;
 
-    // DEFINE a global proxy that handles EVERY call even if variables are confused
     window.pythonGenerator = new Proxy({}, {
       get: function (target, prop) {
         var gen = window.activeBlocklyPythonGenerator || Blockly.Python;
@@ -152,24 +310,36 @@
     console.log("GodMode Proxy Initialized. Blockly.Python found:", !!Blockly.Python);
   </script>
 
-  <!-- Load Custom Blocks with Cache Buster -->
-  <script src="custom_blocks.js?v=20260210_1552"></script>
+  <!-- Load Custom Blocks -->
+  <script src="custom_blocks.js?v=20260806"></script>
 
   <script>
-    // Initialize Blockly
+    // Initialize Blockly workspace
     var workspace = Blockly.inject('blocklyDiv', {
-      toolbox: document.getElementById('toolbox')
+      toolbox: document.getElementById('toolbox'),
+      grid: {
+        spacing: 20,
+        length: 3,
+        colour: '#ccc',
+        snap: true
+      },
+      zoom: {
+        controls: true,
+        wheel: true,
+        startScale: 1.0,
+        maxScale: 3,
+        minScale: 0.3,
+        scaleSpeed: 1.2
+      },
+      trashcan: true
     });
 
-    // Helper functions for Python interaction
+    // ── Public API called by Python (BlockEditorWindow) ──
+
     function getPythonCode() {
       try {
-        // ALWAYS use the generator instance directly from the workspace context or global
         var generator = window.activeBlocklyPythonGenerator || Blockly.Python;
-
         console.log("Executing Code Gen. Generator type:", typeof generator);
-        console.log("Generator has valueToCode:", typeof generator.valueToCode === 'function');
-
         var code = generator.workspaceToCode(workspace);
         return code;
       } catch (e) {
@@ -184,7 +354,7 @@
     }
 
     function setXML(xmlText) {
-      console.log("Received XML to inject:", xmlText);
+      console.log("Received XML to inject (first 80 chars):", xmlText.substring(0, 80));
       try {
         var xml;
         if (Blockly.utils && Blockly.utils.xml && Blockly.utils.xml.textToDom) {
@@ -196,6 +366,7 @@
         }
         Blockly.mainWorkspace.clear();
         Blockly.Xml.domToWorkspace(xml, workspace);
+        console.log("XML injected successfully.");
       } catch (e) {
         console.error("Error setting XML:", e);
       }

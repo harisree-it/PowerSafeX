@@ -6,7 +6,10 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
 import json
+import os
+import datetime
 from gui.windows.block_editor import BlockEditorWindow
+from engine.config import BACKUPS_DIR
 
 TEST_PARAMS_SCHEMA = {
     "Input voltage range verification": [
@@ -97,6 +100,12 @@ class TestParameterDialog(QDialog):
         return data
 
 class TestSelectionWindow(QWidget):
+    # Persistent file for saving block flows (custom sequences)
+    SEQUENCES_FILE = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+        "data", "custom_sequences.json"
+    )
+
     def __init__(self, on_next_callback, on_back_callback, on_imported_callback=None):
         super().__init__()
         self.on_next = on_next_callback 
@@ -167,7 +176,7 @@ class TestSelectionWindow(QWidget):
             self.test_table.setItem(i, 2, QTableWidgetItem(name))
             
         self.test_params = {}
-        self.custom_sequences = {} # Stores {test_name: {"code": python_str, "xml": xml_str}}
+        self.custom_sequences = self._load_sequences()  # Auto-load persisted block flows
         self.test_table.currentItemChanged.connect(self.update_details_panel)
         
         content.addWidget(self.test_table, stretch=1)
@@ -236,6 +245,7 @@ class TestSelectionWindow(QWidget):
         self.dut_data = session_data.get("dut_data", {})
         self.test_params = session_data.get("test_params", {})
         self.custom_sequences = session_data.get("custom_sequences", {})
+        self._save_sequences()  # Persist imported sequences to disk
         selected = session_data.get("selected_tests", [])
         self.refresh_table_checks(selected)
         self.update_details_panel(self.test_table.currentItem())
@@ -363,7 +373,11 @@ class TestSelectionWindow(QWidget):
         # Get current params for this test
         current_params = self.test_params.get(test_name, {})
         
-        self.editor_window = BlockEditorWindow(test_name, current_params, existing_xml, self.save_custom_sequence)
+        self.editor_window = BlockEditorWindow(
+            test_name, current_params, existing_xml,
+            self.save_custom_sequence,
+            dut_data=getattr(self, 'dut_data', {})
+        )
         self.editor_window.show()
         
     def save_custom_sequence(self, test_name, python_code, xml_content):
@@ -371,9 +385,32 @@ class TestSelectionWindow(QWidget):
             "code": python_code,
             "xml": xml_content
         }
+        self._save_sequences()  # Auto-persist to disk
         # Refresh details to show "Custom sequence active"
         if self.current_test_name == test_name:
              self.update_details_panel(self.test_table.currentItem())
+
+    def _load_sequences(self):
+        """Load custom sequences from persistent JSON file."""
+        try:
+            if os.path.exists(self.SEQUENCES_FILE):
+                with open(self.SEQUENCES_FILE, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                print(f"Loaded {len(data)} custom sequence(s) from {self.SEQUENCES_FILE}")
+                return data
+        except Exception as e:
+            print(f"Warning: Could not load custom sequences: {e}")
+        return {}
+
+    def _save_sequences(self):
+        """Save custom sequences to persistent JSON file."""
+        try:
+            os.makedirs(os.path.dirname(self.SEQUENCES_FILE), exist_ok=True)
+            with open(self.SEQUENCES_FILE, 'w', encoding='utf-8') as f:
+                json.dump(self.custom_sequences, f, indent=2, ensure_ascii=False)
+            print(f"Saved {len(self.custom_sequences)} custom sequence(s) to {self.SEQUENCES_FILE}")
+        except Exception as e:
+            print(f"Warning: Could not save custom sequences: {e}")
 
     def on_backup(self):
         # 1. Gather all data
@@ -384,11 +421,13 @@ class TestSelectionWindow(QWidget):
             "custom_sequences": self.custom_sequences
         }
         
-        # 2. Open Save Dialog
+        # 2. Open Save Dialog (defaults to data/backups/)
+        os.makedirs(BACKUPS_DIR, exist_ok=True)
+        default_name = f"backup_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         file_path, _ = QFileDialog.getSaveFileName(
-            self, "Backup Settings", "", "JSON Files (*.json)"
+            self, "Backup Settings", os.path.join(BACKUPS_DIR, default_name), "JSON Files (*.json)"
         )
-        
+
         if file_path:
             try:
                 with open(file_path, 'w') as f:
@@ -418,6 +457,7 @@ class TestSelectionWindow(QWidget):
                 self.dut_data = data["dut_data"]
                 self.test_params = data["test_params"]
                 self.custom_sequences = data.get("custom_sequences", {})
+                self._save_sequences()  # Persist imported sequences to disk
                 selected = data.get("selected_tests", [])
                 
                 # 4. Refresh UI
