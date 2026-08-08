@@ -455,9 +455,9 @@ class ConfigWindow(QWidget):
                 QMessageBox.critical(self, "Error", f"Failed to save backup: {str(e)}")
 
     def on_import(self):
-        # 1. Open Open Dialog
+        # 1. Open Open Dialog (defaults to data/backups/)
         file_path, _ = QFileDialog.getOpenFileName(
-            self, "Import Settings", "", "JSON Files (*.json)"
+            self, "Import Settings", BACKUPS_DIR, "JSON Files (*.json)"
         )
         
         if file_path:

@@ -415,3 +415,37 @@ class BlockEditorWindow(QMainWindow):
         if self._runner and self._runner.isRunning():
             self._runner.stop()
             self._append_log("⏹  Stop requested — waiting for thread to finish…")
+            # The stop flag is only checked from the log callback, so a sequence
+            # blocked inside a long Wait block (time.sleep) won't react until it
+            # wakes up on its own. Force it after a grace period so Stop doesn't
+            # silently do nothing — mirrors the emergency-stop behavior used
+            # elsewhere in the app.
+            QTimer.singleShot(2000, self._force_stop_if_still_running)
+
+    def _force_stop_if_still_running(self):
+        if self._runner and self._runner.isRunning():
+            self._append_log("⏹  Sequence did not stop in time — forcing termination.")
+            self._runner.terminate()
+            self._runner.wait(2000)
+            self._safety_shutdown()
+            self._on_run_finished(False, "Force-stopped")
+
+    def _safety_shutdown(self):
+        """Best-effort: turn off source/load outputs after a forced stop."""
+        try:
+            from instruments.manager import InstrumentManager
+            mgr = InstrumentManager()
+            try:
+                if mgr.ac_source and mgr.ac_source.connected:
+                    mgr.ac_source.output_off()
+                    self._append_log("🔒 Source output turned OFF (safety).")
+            except Exception:
+                pass
+            try:
+                if mgr.dc_load and mgr.dc_load.connected:
+                    mgr.dc_load.load_off()
+                    self._append_log("🔒 Load turned OFF (safety).")
+            except Exception:
+                pass
+        except Exception as e:
+            self._append_log(f"⚠ Safety shutdown error: {e}")

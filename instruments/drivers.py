@@ -649,16 +649,6 @@ class ChromaElectronicLoad(Instrument):
          self.write(f"CONF:POW:PROT {power}")
         
     def measure_voltage(self):
-        # In simulation, we need to know what the Source is doing
-        try:
-            from instruments.manager import InstrumentManager
-            mgr = InstrumentManager()
-            srcs = mgr.get_instruments_by_role("Source")
-            if srcs:
-                pass
-        except:
-            pass
-        
         if self.simulation_mode:
              self.query("MEAS:VOLT?")
              return 24.0 + random.uniform(-0.1, 0.1)
@@ -971,11 +961,17 @@ class TektronixScope(Instrument):
             
 
     def setup_channel(self, channel, scale, coupling="DC"):
+        """Convenience wrapper: set vertical scale + coupling for a channel in one call.
+        (Previously a no-op stub that only printed and never sent SCPI commands.)"""
         print(f"[Scope] Setup {channel}: {scale}V/div, {coupling}")
-        
+        self.set_vertical_scale(channel, scale)
+        self.set_coupling(channel, coupling)
+
     def set_timebase(self, scale):
-        print(f"[Scope] Set Timebase: {scale}s/div")
-        
+        """Alias for set_time_scale (kept for backward-compat naming).
+        (Previously a no-op stub that only printed and never sent SCPI commands.)"""
+        self.set_time_scale(scale)
+
     def capture_waveform(self, channel="CH1"):
         t = np.linspace(0, 0.02, 1000)
         freq = 50

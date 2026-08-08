@@ -3,7 +3,10 @@ import json
 import os
 from instruments.drivers import ChromaPowerSupply, ChromaAcSource, ChromaElectronicLoad, TektronixScope, Instrument
 
-CONFIG_FILE = "instruments.json"
+# Absolute path so this resolves the same way regardless of the process's
+# current working directory (previously a bare relative filename, which broke
+# when the app or a script was launched from anywhere other than the project root).
+CONFIG_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "instruments.json")
 
 class InstrumentManager:
     _instance = None
@@ -185,19 +188,44 @@ class InstrumentManager:
             if loads: return loads[0].get("limits", {"V": 80, "I": 60, "P": 300})
         return {"V": 80, "I": 60, "P": 300}
 
+    def _invalidate_driver(self, name):
+        """Drop (and cleanly disconnect) any cached driver instance for `name`.
+
+        Without this, editing an instrument's address/driver/model in the UI had
+        no effect until the app was restarted, because get_driver_instance()
+        just kept returning the already-created instance for that name.
+        """
+        driver = self._driver_instances.pop(name, None)
+        if driver is not None:
+            try:
+                if driver.connected:
+                    driver.disconnect()
+            except Exception as e:
+                print(f"Error disconnecting stale driver for {name}: {e}")
+
     def update_instrument(self, idx, data):
         if 0 <= idx < len(self.instruments):
+            old_name = self.instruments[idx].get("name")
             self.instruments[idx] = data
             self.save_config()
-            
+            # Invalidate whichever cache key might be stale (name may have changed too)
+            if old_name:
+                self._invalidate_driver(old_name)
+            new_name = data.get("name")
+            if new_name and new_name != old_name:
+                self._invalidate_driver(new_name)
+
     def add_instrument(self, data):
         self.instruments.append(data)
         self.save_config()
 
     def remove_instrument(self, idx):
         if 0 <= idx < len(self.instruments):
+            name = self.instruments[idx].get("name")
             self.instruments.pop(idx)
             self.save_config()
+            if name:
+                self._invalidate_driver(name)
 
     def connect_all(self):
         """Connect to all configured instruments."""

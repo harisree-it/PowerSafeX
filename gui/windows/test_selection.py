@@ -1,6 +1,6 @@
-from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                              QPushButton, QComboBox, QLineEdit, QFormLayout, QGridLayout,
-                             QGroupBox, QCheckBox, QScrollArea,
+                             QGroupBox, QRadioButton, QScrollArea,
                              QTableWidget, QTableWidgetItem, QHeaderView, QDialog, QDialogButtonBox,
                              QFileDialog)
 from PyQt6.QtCore import Qt
@@ -9,7 +9,7 @@ import json
 import os
 import datetime
 from gui.windows.block_editor import BlockEditorWindow
-from engine.config import BACKUPS_DIR
+from engine.config import BACKUPS_DIR, DATA_DIR
 
 TEST_PARAMS_SCHEMA = {
     "Input voltage range verification": [
@@ -101,10 +101,7 @@ class TestParameterDialog(QDialog):
 
 class TestSelectionWindow(QWidget):
     # Persistent file for saving block flows (custom sequences)
-    SEQUENCES_FILE = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-        "data", "custom_sequences.json"
-    )
+    SEQUENCES_FILE = os.path.join(DATA_DIR, "custom_sequences.json")
 
     def __init__(self, on_next_callback, on_back_callback, on_imported_callback=None):
         super().__init__()
@@ -194,9 +191,11 @@ class TestSelectionWindow(QWidget):
         # Reports
         report_group = QGroupBox("Report Options")
         report_layout = QHBoxLayout()
-        self.pdf_radio = QCheckBox("PDF Report (Default)")
+        # Mutually exclusive report format (previously QCheckBox, which let both
+        # or neither be checked even though only one format can actually be produced).
+        self.pdf_radio = QRadioButton("PDF Report (Default)")
         self.pdf_radio.setChecked(True)
-        self.word_radio = QCheckBox("Word Report")
+        self.word_radio = QRadioButton("Word Report")
         report_layout.addWidget(self.pdf_radio)
         report_layout.addWidget(self.word_radio)
         
@@ -439,9 +438,9 @@ class TestSelectionWindow(QWidget):
                 QMessageBox.critical(self, "Error", f"Failed to save backup: {str(e)}")
 
     def on_import(self):
-        # 1. Open Open Dialog
+        # 1. Open Open Dialog (defaults to data/backups/)
         file_path, _ = QFileDialog.getOpenFileName(
-            self, "Import Settings", "", "JSON Files (*.json)"
+            self, "Import Settings", BACKUPS_DIR, "JSON Files (*.json)"
         )
         
         if file_path:
