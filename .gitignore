@@ -37,3 +37,6 @@ logs/
 
 # User data (persisted block flows, backup exports)
 data/
+
+# Editor
+.vscode/
